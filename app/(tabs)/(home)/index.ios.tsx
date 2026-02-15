@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
 import ProgressRing from '@/components/ProgressRing';
@@ -66,6 +67,7 @@ interface ModalConfig {
 export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [modalConfig, setModalConfig] = useState<ModalConfig>({
     visible: false,
     title: '',
@@ -82,6 +84,12 @@ export default function HomeScreen() {
   const hideModal = () => {
     console.log('[Modal] Hiding modal');
     setModalConfig({ ...modalConfig, visible: false });
+  };
+
+  const resetToHome = () => {
+    console.log('[User Action] Resetting to home screen');
+    setAnalysisResult(null);
+    setCapturedImages([]);
   };
 
   const pickImage = async () => {
@@ -147,6 +155,8 @@ export default function HomeScreen() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const imageUri = result.assets[0].uri;
         console.log('[ImagePicker] Photo captured:', imageUri);
+        const newImages = [...capturedImages, imageUri];
+        setCapturedImages(newImages);
         await analyzeContract(imageUri);
       } else {
         console.log('[User Action] Photo capture cancelled');
@@ -155,6 +165,11 @@ export default function HomeScreen() {
       console.error('[Error] Camera failed:', error);
       showModal('Error', error.message || 'Failed to take photo', 'error');
     }
+  };
+
+  const takeAnotherPhoto = async () => {
+    console.log('[User Action] Tapped Take Another Photo button');
+    await takePhoto();
   };
 
   const analyzeContract = async (imageUri: string) => {
@@ -179,9 +194,9 @@ export default function HomeScreen() {
 
   const getSeverityColor = (severity?: 'low' | 'medium' | 'high') => {
     const severityColorMap = {
-      low: colors.warning,
-      medium: colors.accent,
-      high: colors.danger,
+      low: '#10B981',
+      medium: '#FFB800',
+      high: '#EF4444',
     };
     return severityColorMap[severity || 'low'];
   };
@@ -214,22 +229,22 @@ export default function HomeScreen() {
       {
         label: 'Hidden Risks',
         value: analysisResult.hiddenRisks.length,
-        color: colors.danger,
+        color: '#EF4444',
       },
       {
         label: 'Money Traps',
         value: analysisResult.moneyTraps.length,
-        color: colors.accent,
+        color: '#FFB800',
       },
       {
         label: 'Auto-Renew',
         value: analysisResult.autoRenewTraps.length,
-        color: colors.warning,
+        color: '#8B5CF6',
       },
       {
         label: 'Dangerous',
         value: analysisResult.dangerousClauses.length,
-        color: colors.primary,
+        color: '#3B82F6',
       },
     ];
   };
@@ -290,6 +305,41 @@ export default function HomeScreen() {
 
           {analysisResult && !loading && (
             <View style={styles.resultsContainer}>
+              <View style={styles.backButtonContainer}>
+                <TouchableOpacity
+                  style={[styles.backButton, { borderColor: colors.border }]}
+                  onPress={resetToHome}
+                >
+                  <IconSymbol
+                    ios_icon_name="arrow.left"
+                    android_material_icon_name="arrow-back"
+                    size={20}
+                    color={colors.text}
+                  />
+                  <Text style={[styles.backButtonText, { color: colors.text }]}>
+                    Back to Home
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {capturedImages.length > 0 && (
+                <View style={styles.imagesSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    Scanned Pages ({capturedImages.length})
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesScroll}>
+                    {capturedImages.map((imageUri, index) => (
+                      <View key={index} style={styles.imagePreview}>
+                        <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                        <Text style={[styles.imageLabel, { color: colors.textSecondary }]}>
+                          Page {index + 1}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
               <GradientCard style={styles.scoreCard}>
                 <View style={styles.scoreContent}>
                   <ProgressRing
@@ -322,39 +372,43 @@ export default function HomeScreen() {
                       ios_icon_name="exclamationmark.triangle.fill"
                       android_material_icon_name="warning"
                       size={24}
-                      color={colors.danger}
+                      color="#EF4444"
                     />
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>
                       Hidden Risks
                     </Text>
                   </View>
-                  {analysisResult.hiddenRisks.map((risk, index) => (
-                    <GradientCard key={index} style={styles.issueCard}>
-                      <View style={styles.issueHeader}>
-                        <Text style={[styles.issueTitle, { color: colors.text }]}>
-                          {risk.title}
-                        </Text>
-                        <View
-                          style={[
-                            styles.severityBadge,
-                            { backgroundColor: getSeverityColor(risk.severity) + '20' },
-                          ]}
-                        >
-                          <Text
+                  {analysisResult.hiddenRisks.map((risk, index) => {
+                    const severityColor = getSeverityColor(risk.severity);
+                    const severityLabel = getSeverityLabel(risk.severity);
+                    return (
+                      <GradientCard key={index} style={styles.issueCard}>
+                        <View style={styles.issueHeader}>
+                          <Text style={[styles.issueTitle, { color: colors.text }]}>
+                            {risk.title}
+                          </Text>
+                          <View
                             style={[
-                              styles.severityText,
-                              { color: getSeverityColor(risk.severity) },
+                              styles.severityBadge,
+                              { backgroundColor: severityColor + '20' },
                             ]}
                           >
-                            {getSeverityLabel(risk.severity)}
-                          </Text>
+                            <Text
+                              style={[
+                                styles.severityText,
+                                { color: severityColor },
+                              ]}
+                            >
+                              {severityLabel}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
-                        {risk.description}
-                      </Text>
-                    </GradientCard>
-                  ))}
+                        <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
+                          {risk.description}
+                        </Text>
+                      </GradientCard>
+                    );
+                  })}
                 </View>
               )}
 
@@ -365,7 +419,7 @@ export default function HomeScreen() {
                       ios_icon_name="dollarsign.circle.fill"
                       android_material_icon_name="attach-money"
                       size={24}
-                      color={colors.accent}
+                      color="#FFB800"
                     />
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Money Traps</Text>
                   </View>
@@ -376,9 +430,11 @@ export default function HomeScreen() {
                           {trap.title}
                         </Text>
                         {trap.amount && (
-                          <Text style={[styles.amountBadge, { color: colors.accent }]}>
-                            {trap.amount}
-                          </Text>
+                          <View style={[styles.amountBadge, { backgroundColor: '#FFB800' + '20' }]}>
+                            <Text style={[styles.amountText, { color: '#FFB800' }]}>
+                              {trap.amount}
+                            </Text>
+                          </View>
                         )}
                       </View>
                       <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
@@ -396,7 +452,7 @@ export default function HomeScreen() {
                       ios_icon_name="arrow.clockwise.circle.fill"
                       android_material_icon_name="refresh"
                       size={24}
-                      color={colors.warning}
+                      color="#8B5CF6"
                     />
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>
                       Auto-Renew Traps
@@ -408,9 +464,11 @@ export default function HomeScreen() {
                         <Text style={[styles.issueTitle, { color: colors.text }]}>
                           {trap.title}
                         </Text>
-                        <Text style={[styles.difficultyText, { color: colors.warning }]}>
-                          {trap.cancellationDifficulty}
-                        </Text>
+                        <View style={[styles.difficultyBadge, { backgroundColor: '#8B5CF6' + '20' }]}>
+                          <Text style={[styles.difficultyText, { color: '#8B5CF6' }]}>
+                            {trap.cancellationDifficulty}
+                          </Text>
+                        </View>
                       </View>
                       <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
                         {trap.description}
@@ -427,7 +485,7 @@ export default function HomeScreen() {
                       ios_icon_name="flame.fill"
                       android_material_icon_name="local-fire-department"
                       size={24}
-                      color={colors.primary}
+                      color="#3B82F6"
                     />
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>
                       Dangerous Clauses
@@ -439,9 +497,11 @@ export default function HomeScreen() {
                         <Text style={[styles.issueTitle, { color: colors.text }]}>
                           {clause.title}
                         </Text>
-                        <Text style={[styles.legalImpactText, { color: colors.primary }]}>
-                          {clause.legalImpact}
-                        </Text>
+                        <View style={[styles.legalImpactBadge, { backgroundColor: '#3B82F6' + '20' }]}>
+                          <Text style={[styles.legalImpactText, { color: '#3B82F6' }]}>
+                            {clause.legalImpact}
+                          </Text>
+                        </View>
                       </View>
                       <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
                         {clause.description}
@@ -450,41 +510,59 @@ export default function HomeScreen() {
                   ))}
                 </View>
               )}
+
+              <TouchableOpacity
+                style={[styles.anotherPhotoButton, { borderColor: colors.primary }]}
+                onPress={takeAnotherPhoto}
+                disabled={loading}
+              >
+                <IconSymbol
+                  ios_icon_name="camera.fill"
+                  android_material_icon_name="camera"
+                  size={24}
+                  color={colors.primary}
+                />
+                <Text style={[styles.anotherPhotoButtonText, { color: colors.primary }]}>
+                  Scan Another Page
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </ScrollView>
 
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-            onPress={takePhoto}
-            disabled={loading}
-          >
-            <IconSymbol
-              ios_icon_name="camera.fill"
-              android_material_icon_name="camera"
-              size={24}
-              color="#FFFFFF"
-            />
-            <Text style={styles.primaryButtonText}>Take Photo</Text>
-          </TouchableOpacity>
+        {!analysisResult && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={takePhoto}
+              disabled={loading}
+            >
+              <IconSymbol
+                ios_icon_name="camera.fill"
+                android_material_icon_name="camera"
+                size={24}
+                color="#FFFFFF"
+              />
+              <Text style={styles.primaryButtonText}>Take Photo</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.secondaryButton, { borderColor: colors.primary }]}
-            onPress={pickImage}
-            disabled={loading}
-          >
-            <IconSymbol
-              ios_icon_name="photo.fill"
-              android_material_icon_name="image"
-              size={24}
-              color={colors.primary}
-            />
-            <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
-              Upload Image
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: colors.primary }]}
+              onPress={pickImage}
+              disabled={loading}
+            >
+              <IconSymbol
+                ios_icon_name="photo.fill"
+                android_material_icon_name="image"
+                size={24}
+                color={colors.primary}
+              />
+              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+                Upload Image
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Modal
           visible={modalConfig.visible}
@@ -508,7 +586,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 180,
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 32,
@@ -557,6 +635,44 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     gap: 24,
+    paddingBottom: 40,
+  },
+  backButtonContainer: {
+    marginBottom: 8,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  imagesSection: {
+    gap: 12,
+  },
+  imagesScroll: {
+    flexDirection: 'row',
+  },
+  imagePreview: {
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: 100,
+    height: 140,
+    borderRadius: 12,
+    backgroundColor: '#1F2937',
+  },
+  imageLabel: {
+    fontSize: 12,
+    marginTop: 6,
   },
   scoreCard: {
     padding: 24,
@@ -625,16 +741,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   amountBadge: {
-    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  amountText: {
+    fontSize: 14,
     fontWeight: 'bold',
   },
+  difficultyBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
   difficultyText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
+  legalImpactBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
   legalImpactText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
+  },
+  anotherPhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    gap: 12,
+    marginTop: 8,
+  },
+  anotherPhotoButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   actionButtons: {
     position: 'absolute',
