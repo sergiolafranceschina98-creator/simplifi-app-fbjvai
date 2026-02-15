@@ -111,7 +111,7 @@ export default function HomeScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        quality: 0.2,
+        quality: 0.1,
         allowsMultipleSelection: true,
       });
 
@@ -186,11 +186,22 @@ export default function HomeScreen() {
       showModal('Analysis Complete', 'Your contract has been analyzed successfully!', 'success');
     } catch (error: any) {
       console.error('[Error] Analysis failed:', error);
-      showModal(
-        'Analysis Failed',
-        error.message || 'Failed to analyze contract. Please try again.',
-        'error'
-      );
+      const errorMessage = error.message || 'Failed to analyze contract. Please try again.';
+      const isPayloadTooLarge = errorMessage.includes('413') || errorMessage.toLowerCase().includes('too large');
+      
+      if (isPayloadTooLarge) {
+        showModal(
+          'Image Too Large',
+          'The image file is too large to process. Please try taking a new photo with the camera instead of uploading from your photo library.',
+          'error'
+        );
+      } else {
+        showModal(
+          'Analysis Failed',
+          errorMessage,
+          'error'
+        );
+      }
     } finally {
       setLoading(false);
     }
