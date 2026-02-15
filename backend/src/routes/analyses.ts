@@ -129,20 +129,17 @@ export function register(app: App, fastify: FastifyInstance) {
         const uploadedKey = await app.storage.upload(key, buffer);
         const { url: imageUrl } = await app.storage.getSignedUrl(uploadedKey);
 
-        app.logger.info({ imageKey: uploadedKey }, "Image uploaded successfully");
+        app.logger.info({ imageKey: uploadedKey, imageUrl }, "Image uploaded successfully");
 
-        // Convert image to base64 for vision API
-        const base64Image = buffer.toString("base64");
-
-        // Step 1: Extract text from image using Gemini vision
-        app.logger.info("Extracting text from contract image");
+        // Step 1: Extract text from image using Gemini vision via URL
+        app.logger.info({ imageUrl }, "Extracting text from contract image using URL");
         const extractionResult = await generateText({
           model: gateway("google/gemini-3-flash"),
           messages: [
             {
               role: "user",
               content: [
-                { type: "image", image: base64Image },
+                { type: "image", image: imageUrl },
                 {
                   type: "text",
                   text: "Extract all text from this contract/agreement image. Return the full text as accurately as possible.",
