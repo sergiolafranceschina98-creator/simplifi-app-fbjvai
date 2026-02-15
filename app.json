@@ -7,12 +7,14 @@
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-qtv.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/app-icon-qtv.png",
       "resizeMode": "contain",
       "backgroundColor": "#0A0E1A"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.simplifi.app",
@@ -29,7 +31,6 @@
         "foregroundImage": "./assets/images/app-icon-qtv.png",
         "backgroundColor": "#0A0E1A"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.simplifi.app",
       "versionCode": 1,
       "permissions": [
@@ -58,7 +59,9 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "backendUrl": "https://vp7bgbhdgyw3gghcxr8zk5kkcwfvgfhs.app.specular.dev",
       "eas": {
         "projectId": "your-project-id"
