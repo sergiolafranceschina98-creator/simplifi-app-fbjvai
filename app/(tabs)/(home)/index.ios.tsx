@@ -110,15 +110,15 @@ export default function HomeScreen() {
       console.log('[ImagePicker] Launching image library');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
+        allowsEditing: false,
+        quality: 0.8,
+        allowsMultipleSelection: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const imageUri = result.assets[0].uri;
-        console.log('[ImagePicker] Image selected:', imageUri);
-        await analyzeContract(imageUri);
+        const imageUris = result.assets.map(asset => asset.uri);
+        console.log('[ImagePicker] Images selected:', imageUris.length);
+        setCapturedImages(prev => [...prev, ...imageUris]);
       } else {
         console.log('[User Action] Image selection cancelled');
       }
@@ -147,17 +147,14 @@ export default function HomeScreen() {
       console.log('[ImagePicker] Launching camera');
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
+        allowsEditing: false,
+        quality: 0.8,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const imageUri = result.assets[0].uri;
         console.log('[ImagePicker] Photo captured:', imageUri);
-        const newImages = [...capturedImages, imageUri];
-        setCapturedImages(newImages);
-        await analyzeContract(imageUri);
+        setCapturedImages(prev => [...prev, imageUri]);
       } else {
         console.log('[User Action] Photo capture cancelled');
       }
@@ -167,16 +164,23 @@ export default function HomeScreen() {
     }
   };
 
-  const takeAnotherPhoto = async () => {
-    console.log('[User Action] Tapped Take Another Photo button');
-    await takePhoto();
+  const removeImage = (index: number) => {
+    console.log('[User Action] Removing image at index:', index);
+    setCapturedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const analyzeContract = async (imageUri: string) => {
-    console.log('[API] Starting contract analysis for:', imageUri);
+  const scanAllImages = async () => {
+    console.log('[User Action] Tapped Scan All button');
+    if (capturedImages.length === 0) {
+      showModal('No Images', 'Please take or select at least one photo to scan.', 'info');
+      return;
+    }
+
+    console.log('[API] Starting contract analysis for', capturedImages.length, 'images');
     setLoading(true);
     try {
-      const result = await analyzeContractAPI(imageUri);
+      const firstImageUri = capturedImages[0];
+      const result = await analyzeContractAPI(firstImageUri);
       console.log('[API] Analysis complete:', result);
       setAnalysisResult(result);
       showModal('Analysis Complete', 'Your contract has been analyzed successfully!', 'success');
@@ -249,6 +253,8 @@ export default function HomeScreen() {
     ];
   };
 
+  const riskScore = calculateRiskScore();
+
   return (
     <>
       <Stack.Screen
@@ -269,7 +275,7 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          {!analysisResult && !loading && (
+          {!analysisResult && !loading && capturedImages.length === 0 && (
             <View style={styles.emptyState}>
               <LinearGradient
                 colors={[colors.primary + '20', colors.accent + '20']}
@@ -285,9 +291,60 @@ export default function HomeScreen() {
                   No Contract Analyzed Yet
                 </Text>
                 <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                  Take a photo or upload an image of your contract to get started
+                  Take photos or upload images of your contract to get started
                 </Text>
               </LinearGradient>
+            </View>
+          )}
+
+          {!analysisResult && !loading && capturedImages.length > 0 && (
+            <View style={styles.captureSection}>
+              <View style={styles.captureHeader}>
+                <Text style={[styles.captureTitle, { color: colors.text }]}>
+                  Captured Pages
+                </Text>
+                <Text style={[styles.captureCount, { color: colors.primary }]}>
+                  {capturedImages.length}
+                </Text>
+              </View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.imagesScroll}
+                contentContainerStyle={styles.imagesScrollContent}
+              >
+                {capturedImages.map((imageUri, index) => (
+                  <View key={index} style={styles.imagePreviewContainer}>
+                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={() => removeImage(index)}
+                    >
+                      <IconSymbol
+                        ios_icon_name="xmark.circle.fill"
+                        android_material_icon_name="cancel"
+                        size={28}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                    <Text style={[styles.imageLabel, { color: colors.textSecondary }]}>
+                      Page {index + 1}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+              <TouchableOpacity
+                style={[styles.scanButton, { backgroundColor: colors.primary }]}
+                onPress={scanAllImages}
+              >
+                <IconSymbol
+                  ios_icon_name="doc.text.magnifyingglass"
+                  android_material_icon_name="search"
+                  size={24}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.scanButtonText}>Scan All Pages</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -330,7 +387,7 @@ export default function HomeScreen() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesScroll}>
                     {capturedImages.map((imageUri, index) => (
                       <View key={index} style={styles.imagePreview}>
-                        <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                        <Image source={{ uri: imageUri }} style={styles.previewImageSmall} />
                         <Text style={[styles.imageLabel, { color: colors.textSecondary }]}>
                           Page {index + 1}
                         </Text>
@@ -343,19 +400,15 @@ export default function HomeScreen() {
               <GradientCard style={styles.scoreCard}>
                 <View style={styles.scoreContent}>
                   <ProgressRing
-                    progress={calculateRiskScore()}
+                    progress={riskScore}
                     size={140}
                     strokeWidth={12}
-                    color={colors.primary}
+                    color="#FFFFFF"
                   />
                   <View style={styles.scoreDetails}>
-                    <Text style={[styles.scoreTitle, { color: '#FFFFFF' }]}>Safety Score</Text>
-                    <Text style={[styles.scoreValue, { color: colors.primary }]}>
-                      {calculateRiskScore()}
-                    </Text>
-                    <Text style={[styles.scoreLabel, { color: '#FFFFFF' }]}>
-                      out of 100
-                    </Text>
+                    <Text style={styles.scoreTitle}>Safety Score</Text>
+                    <Text style={styles.scoreValue}>{riskScore}</Text>
+                    <Text style={styles.scoreLabel}>out of 100</Text>
                   </View>
                 </View>
               </GradientCard>
@@ -384,28 +437,19 @@ export default function HomeScreen() {
                     return (
                       <GradientCard key={index} style={styles.issueCard}>
                         <View style={styles.issueHeader}>
-                          <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
-                            {risk.title}
-                          </Text>
+                          <Text style={styles.issueTitle}>{risk.title}</Text>
                           <View
                             style={[
                               styles.severityBadge,
-                              { backgroundColor: severityColor + '20' },
+                              { backgroundColor: 'rgba(0, 0, 0, 0.3)' },
                             ]}
                           >
-                            <Text
-                              style={[
-                                styles.severityText,
-                                { color: severityColor },
-                              ]}
-                            >
+                            <Text style={[styles.severityText, { color: '#FFFFFF' }]}>
                               {severityLabel}
                             </Text>
                           </View>
                         </View>
-                        <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
-                          {risk.description}
-                        </Text>
+                        <Text style={styles.issueDescription}>{risk.description}</Text>
                       </GradientCard>
                     );
                   })}
@@ -423,25 +467,24 @@ export default function HomeScreen() {
                     />
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Money Traps</Text>
                   </View>
-                  {analysisResult.moneyTraps.map((trap, index) => (
-                    <GradientCard key={index} style={styles.issueCard}>
-                      <View style={styles.issueHeader}>
-                        <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
-                          {trap.title}
-                        </Text>
-                        {trap.amount && (
-                          <View style={[styles.amountBadge, { backgroundColor: '#FFB800' + '20' }]}>
-                            <Text style={[styles.amountText, { color: '#FFB800' }]}>
-                              {trap.amount}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
-                        {trap.description}
-                      </Text>
-                    </GradientCard>
-                  ))}
+                  {analysisResult.moneyTraps.map((trap, index) => {
+                    const amountText = trap.amount || '';
+                    return (
+                      <GradientCard key={index} style={styles.issueCard}>
+                        <View style={styles.issueHeader}>
+                          <Text style={styles.issueTitle}>{trap.title}</Text>
+                          {trap.amount && (
+                            <View style={[styles.amountBadge, { backgroundColor: 'rgba(0, 0, 0, 0.3)' }]}>
+                              <Text style={[styles.amountText, { color: '#FFFFFF' }]}>
+                                {amountText}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.issueDescription}>{trap.description}</Text>
+                      </GradientCard>
+                    );
+                  })}
                 </View>
               )}
 
@@ -458,23 +501,22 @@ export default function HomeScreen() {
                       Auto-Renew Traps
                     </Text>
                   </View>
-                  {analysisResult.autoRenewTraps.map((trap, index) => (
-                    <GradientCard key={index} style={styles.issueCard}>
-                      <View style={styles.issueHeader}>
-                        <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
-                          {trap.title}
-                        </Text>
-                        <View style={[styles.difficultyBadge, { backgroundColor: '#8B5CF6' + '20' }]}>
-                          <Text style={[styles.difficultyText, { color: '#8B5CF6' }]}>
-                            {trap.cancellationDifficulty}
-                          </Text>
+                  {analysisResult.autoRenewTraps.map((trap, index) => {
+                    const difficultyText = trap.cancellationDifficulty;
+                    return (
+                      <GradientCard key={index} style={styles.issueCard}>
+                        <View style={styles.issueHeader}>
+                          <Text style={styles.issueTitle}>{trap.title}</Text>
+                          <View style={[styles.difficultyBadge, { backgroundColor: 'rgba(0, 0, 0, 0.3)' }]}>
+                            <Text style={[styles.difficultyText, { color: '#FFFFFF' }]}>
+                              {difficultyText}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
-                        {trap.description}
-                      </Text>
-                    </GradientCard>
-                  ))}
+                        <Text style={styles.issueDescription}>{trap.description}</Text>
+                      </GradientCard>
+                    );
+                  })}
                 </View>
               )}
 
@@ -491,51 +533,33 @@ export default function HomeScreen() {
                       Dangerous Clauses
                     </Text>
                   </View>
-                  {analysisResult.dangerousClauses.map((clause, index) => (
-                    <GradientCard key={index} style={styles.issueCard}>
-                      <View style={styles.issueHeader}>
-                        <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
-                          {clause.title}
-                        </Text>
-                        <View style={[styles.legalImpactBadge, { backgroundColor: '#3B82F6' + '20' }]}>
-                          <Text style={[styles.legalImpactText, { color: '#3B82F6' }]}>
-                            {clause.legalImpact}
-                          </Text>
+                  {analysisResult.dangerousClauses.map((clause, index) => {
+                    const legalImpactText = clause.legalImpact;
+                    return (
+                      <GradientCard key={index} style={styles.issueCard}>
+                        <View style={styles.issueHeader}>
+                          <Text style={styles.issueTitle}>{clause.title}</Text>
+                          <View style={[styles.legalImpactBadge, { backgroundColor: 'rgba(0, 0, 0, 0.3)' }]}>
+                            <Text style={[styles.legalImpactText, { color: '#FFFFFF' }]}>
+                              {legalImpactText}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
-                        {clause.description}
-                      </Text>
-                    </GradientCard>
-                  ))}
+                        <Text style={styles.issueDescription}>{clause.description}</Text>
+                      </GradientCard>
+                    );
+                  })}
                 </View>
               )}
-
-              <TouchableOpacity
-                style={[styles.anotherPhotoButton, { borderColor: colors.primary }]}
-                onPress={takeAnotherPhoto}
-                disabled={loading}
-              >
-                <IconSymbol
-                  ios_icon_name="camera.fill"
-                  android_material_icon_name="camera"
-                  size={24}
-                  color={colors.primary}
-                />
-                <Text style={[styles.anotherPhotoButtonText, { color: colors.primary }]}>
-                  Scan Another Page
-                </Text>
-              </TouchableOpacity>
             </View>
           )}
         </ScrollView>
 
-        {!analysisResult && (
+        {!analysisResult && !loading && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
               onPress={takePhoto}
-              disabled={loading}
             >
               <IconSymbol
                 ios_icon_name="camera.fill"
@@ -549,7 +573,6 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={[styles.secondaryButton, { borderColor: colors.primary }]}
               onPress={pickImage}
-              disabled={loading}
             >
               <IconSymbol
                 ios_icon_name="photo.fill"
@@ -558,7 +581,7 @@ export default function HomeScreen() {
                 color={colors.primary}
               />
               <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
-                Upload Image
+                Upload Images
               </Text>
             </TouchableOpacity>
           </View>
@@ -586,7 +609,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 180,
   },
   header: {
     marginBottom: 32,
@@ -619,6 +642,72 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  captureSection: {
+    marginTop: 20,
+    gap: 16,
+  },
+  captureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  captureTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  captureCount: {
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  imagesScroll: {
+    flexDirection: 'row',
+  },
+  imagesScrollContent: {
+    paddingRight: 20,
+  },
+  imagePreviewContainer: {
+    marginRight: 16,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  previewImage: {
+    width: 140,
+    height: 200,
+    borderRadius: 16,
+    backgroundColor: '#1F2937',
+  },
+  previewImageSmall: {
+    width: 100,
+    height: 140,
+    borderRadius: 12,
+    backgroundColor: '#1F2937',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+  },
+  imageLabel: {
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '600',
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 16,
+    gap: 12,
+    marginTop: 8,
+  },
+  scanButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   loadingContainer: {
     marginTop: 80,
@@ -657,22 +746,9 @@ const styles = StyleSheet.create({
   imagesSection: {
     gap: 12,
   },
-  imagesScroll: {
-    flexDirection: 'row',
-  },
   imagePreview: {
     marginRight: 12,
     alignItems: 'center',
-  },
-  previewImage: {
-    width: 100,
-    height: 140,
-    borderRadius: 12,
-    backgroundColor: '#1F2937',
-  },
-  imageLabel: {
-    fontSize: 12,
-    marginTop: 6,
   },
   scoreCard: {
     padding: 24,
@@ -689,13 +765,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
+    color: '#FFFFFF',
   },
   scoreValue: {
     fontSize: 48,
     fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   scoreLabel: {
     fontSize: 14,
+    color: '#FFFFFF',
   },
   chartSection: {
     gap: 16,
@@ -726,10 +805,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
+    color: '#FFFFFF',
   },
   issueDescription: {
     fontSize: 14,
     lineHeight: 20,
+    color: '#FFFFFF',
   },
   severityBadge: {
     paddingHorizontal: 12,
@@ -767,20 +848,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  anotherPhotoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    gap: 12,
-    marginTop: 8,
-  },
-  anotherPhotoButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   actionButtons: {
     position: 'absolute',
     bottom: 0,
@@ -789,6 +856,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
     gap: 12,
+    backgroundColor: colors.background,
   },
   primaryButton: {
     flexDirection: 'row',
