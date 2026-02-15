@@ -77,61 +77,84 @@ export default function HomeScreen() {
   const pickImage = async () => {
     console.log('[User Action] Tapped Choose from Library button');
     
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (permissionResult.granted === false) {
-      console.log('[Permission] Photo library access denied');
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        console.log('[Permission] Photo library access denied');
+        setModalConfig({
+          visible: true,
+          title: 'Permission Required',
+          message: 'Please allow access to your photo library to scan contracts.',
+          type: 'info',
+        });
+        return;
+      }
+
+      console.log('[Permission] Photo library access granted');
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (!pickerResult.canceled && pickerResult.assets[0]) {
+        console.log('[Image Selected]:', pickerResult.assets[0].uri);
+        await analyzeContract(pickerResult.assets[0].uri);
+      } else {
+        console.log('[User Action] Image selection cancelled');
+      }
+    } catch (error) {
+      console.error('[Error] pickImage failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to pick image';
       setModalConfig({
         visible: true,
-        title: 'Permission Required',
-        message: 'Please allow access to your photo library to scan contracts.',
-        type: 'info',
+        title: 'Error',
+        message: errorMessage,
+        type: 'error',
       });
-      return;
-    }
-
-    console.log('[Permission] Photo library access granted');
-    const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-    });
-
-    if (!pickerResult.canceled && pickerResult.assets[0]) {
-      console.log('[Image Selected]:', pickerResult.assets[0].uri);
-      await analyzeContract(pickerResult.assets[0].uri);
-    } else {
-      console.log('[User Action] Image selection cancelled');
     }
   };
 
   const takePhoto = async () => {
     console.log('[User Action] Tapped Take Photo button');
     
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
-    if (permissionResult.granted === false) {
-      console.log('[Permission] Camera access denied');
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        console.log('[Permission] Camera access denied');
+        setModalConfig({
+          visible: true,
+          title: 'Permission Required',
+          message: 'Please allow camera access to scan contracts.',
+          type: 'info',
+        });
+        return;
+      }
+
+      console.log('[Permission] Camera access granted');
+      const cameraResult = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (!cameraResult.canceled && cameraResult.assets[0]) {
+        console.log('[Photo Taken]:', cameraResult.assets[0].uri);
+        await analyzeContract(cameraResult.assets[0].uri);
+      } else {
+        console.log('[User Action] Photo capture cancelled');
+      }
+    } catch (error) {
+      console.error('[Error] takePhoto failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to take photo';
       setModalConfig({
         visible: true,
-        title: 'Permission Required',
-        message: 'Please allow camera access to scan contracts.',
-        type: 'info',
+        title: 'Error',
+        message: errorMessage,
+        type: 'error',
       });
-      return;
-    }
-
-    console.log('[Permission] Camera access granted');
-    const cameraResult = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 1,
-    });
-
-    if (!cameraResult.canceled && cameraResult.assets[0]) {
-      console.log('[Photo Taken]:', cameraResult.assets[0].uri);
-      await analyzeContract(cameraResult.assets[0].uri);
-    } else {
-      console.log('[User Action] Photo capture cancelled');
     }
   };
 
