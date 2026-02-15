@@ -3,6 +3,7 @@ import { useTheme } from '@react-navigation/native';
 import { analyzeContract as analyzeContractAPI } from '@/utils/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import {
   View,
   Text,
@@ -92,6 +93,27 @@ export default function HomeScreen() {
     setCapturedImages([]);
   };
 
+  const compressImage = async (uri: string): Promise<string> => {
+    console.log('[ImageCompression] Starting compression for:', uri);
+    try {
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [
+          { resize: { width: 1200 } },
+        ],
+        {
+          compress: 0.3,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      console.log('[ImageCompression] Compressed image URI:', manipulatedImage.uri);
+      return manipulatedImage.uri;
+    } catch (error) {
+      console.error('[ImageCompression] Failed to compress image:', error);
+      return uri;
+    }
+  };
+
   const pickImage = async () => {
     console.log('[User Action] Tapped Upload Image button');
     try {
@@ -111,14 +133,21 @@ export default function HomeScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        quality: 0.1,
+        quality: 0.5,
         allowsMultipleSelection: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const imageUris = result.assets.map(asset => asset.uri);
-        console.log('[ImagePicker] Images selected:', imageUris.length);
-        setCapturedImages(prev => [...prev, ...imageUris]);
+        console.log('[ImagePicker] Images selected:', result.assets.length);
+        const compressedUris: string[] = [];
+        
+        for (const asset of result.assets) {
+          const compressedUri = await compressImage(asset.uri);
+          compressedUris.push(compressedUri);
+        }
+        
+        console.log('[ImagePicker] All images compressed:', compressedUris.length);
+        setCapturedImages(prev => [...prev, ...compressedUris]);
       } else {
         console.log('[User Action] Image selection cancelled');
       }
@@ -148,13 +177,14 @@ export default function HomeScreen() {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        quality: 0.2,
+        quality: 0.5,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const imageUri = result.assets[0].uri;
         console.log('[ImagePicker] Photo captured:', imageUri);
-        setCapturedImages(prev => [...prev, imageUri]);
+        const compressedUri = await compressImage(imageUri);
+        setCapturedImages(prev => [...prev, compressedUri]);
       } else {
         console.log('[User Action] Photo capture cancelled');
       }
@@ -187,21 +217,11 @@ export default function HomeScreen() {
     } catch (error: any) {
       console.error('[Error] Analysis failed:', error);
       const errorMessage = error.message || 'Failed to analyze contract. Please try again.';
-      const isPayloadTooLarge = errorMessage.includes('413') || errorMessage.toLowerCase().includes('too large');
-      
-      if (isPayloadTooLarge) {
-        showModal(
-          'Image Too Large',
-          'The image file is too large to process. Please try taking a new photo with the camera instead of uploading from your photo library.',
-          'error'
-        );
-      } else {
-        showModal(
-          'Analysis Failed',
-          errorMessage,
-          'error'
-        );
-      }
+      showModal(
+        'Analysis Failed',
+        errorMessage,
+        'error'
+      );
     } finally {
       setLoading(false);
     }
