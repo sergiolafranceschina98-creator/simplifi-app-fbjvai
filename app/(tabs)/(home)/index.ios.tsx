@@ -349,11 +349,11 @@ export default function HomeScreen() {
                     color={colors.primary}
                   />
                   <View style={styles.scoreDetails}>
-                    <Text style={[styles.scoreTitle, { color: colors.text }]}>Safety Score</Text>
+                    <Text style={[styles.scoreTitle, { color: '#FFFFFF' }]}>Safety Score</Text>
                     <Text style={[styles.scoreValue, { color: colors.primary }]}>
                       {calculateRiskScore()}
                     </Text>
-                    <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>
+                    <Text style={[styles.scoreLabel, { color: '#FFFFFF' }]}>
                       out of 100
                     </Text>
                   </View>
@@ -384,7 +384,7 @@ export default function HomeScreen() {
                     return (
                       <GradientCard key={index} style={styles.issueCard}>
                         <View style={styles.issueHeader}>
-                          <Text style={[styles.issueTitle, { color: colors.text }]}>
+                          <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
                             {risk.title}
                           </Text>
                           <View
@@ -403,7 +403,7 @@ export default function HomeScreen() {
                             </Text>
                           </View>
                         </View>
-                        <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
+                        <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
                           {risk.description}
                         </Text>
                       </GradientCard>
@@ -426,7 +426,7 @@ export default function HomeScreen() {
                   {analysisResult.moneyTraps.map((trap, index) => (
                     <GradientCard key={index} style={styles.issueCard}>
                       <View style={styles.issueHeader}>
-                        <Text style={[styles.issueTitle, { color: colors.text }]}>
+                        <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
                           {trap.title}
                         </Text>
                         {trap.amount && (
@@ -437,7 +437,7 @@ export default function HomeScreen() {
                           </View>
                         )}
                       </View>
-                      <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
+                      <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
                         {trap.description}
                       </Text>
                     </GradientCard>
@@ -461,7 +461,7 @@ export default function HomeScreen() {
                   {analysisResult.autoRenewTraps.map((trap, index) => (
                     <GradientCard key={index} style={styles.issueCard}>
                       <View style={styles.issueHeader}>
-                        <Text style={[styles.issueTitle, { color: colors.text }]}>
+                        <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
                           {trap.title}
                         </Text>
                         <View style={[styles.difficultyBadge, { backgroundColor: '#8B5CF6' + '20' }]}>
@@ -470,7 +470,7 @@ export default function HomeScreen() {
                           </Text>
                         </View>
                       </View>
-                      <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
+                      <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
                         {trap.description}
                       </Text>
                     </GradientCard>
@@ -494,7 +494,7 @@ export default function HomeScreen() {
                   {analysisResult.dangerousClauses.map((clause, index) => (
                     <GradientCard key={index} style={styles.issueCard}>
                       <View style={styles.issueHeader}>
-                        <Text style={[styles.issueTitle, { color: colors.text }]}>
+                        <Text style={[styles.issueTitle, { color: '#FFFFFF' }]}>
                           {clause.title}
                         </Text>
                         <View style={[styles.legalImpactBadge, { backgroundColor: '#3B82F6' + '20' }]}>
@@ -503,7 +503,7 @@ export default function HomeScreen() {
                           </Text>
                         </View>
                       </View>
-                      <Text style={[styles.issueDescription, { color: colors.textSecondary }]}>
+                      <Text style={[styles.issueDescription, { color: '#FFFFFF' }]}>
                         {clause.description}
                       </Text>
                     </GradientCard>
