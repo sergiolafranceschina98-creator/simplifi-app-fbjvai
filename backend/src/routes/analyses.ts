@@ -40,6 +40,24 @@ const AnalysisResultSchema = z.object({
 
 type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 
+// Helper function to determine MIME type from filename
+function getMimeType(filename: string): string {
+  const ext = filename.toLowerCase().split('.').pop();
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    default:
+      return 'image/jpeg'; // Default to JPEG
+  }
+}
+
 export function register(app: App, fastify: FastifyInstance) {
   // POST /api/analyze-contract - Analyze contract from image
   fastify.post(
@@ -124,22 +142,23 @@ export function register(app: App, fastify: FastifyInstance) {
           return reply.status(413).send({ error: "File size limit exceeded" });
         }
 
-        // Upload image to storage
-        const key = `contract-analyses/${Date.now()}-${data.filename}`;
-        const uploadedKey = await app.storage.upload(key, buffer);
-        const { url: imageUrl } = await app.storage.getSignedUrl(uploadedKey);
+        // Determine MIME type from filename
+        const mimeType = getMimeType(data.filename);
+        app.logger.info({ mimeType, filename: data.filename }, "MIME type determined");
 
-        app.logger.info({ imageKey: uploadedKey, imageUrl }, "Image uploaded successfully");
-
-        // Step 1: Extract text from image using Gemini vision via URL
-        app.logger.info({ imageUrl }, "Extracting text from contract image using URL");
+        // Step 1: Extract text from image using Gemini vision with file buffer
+        app.logger.info({ filename: data.filename, mimeType }, "Extracting text from contract image");
         const extractionResult = await generateText({
           model: gateway("google/gemini-3-flash"),
           messages: [
             {
               role: "user",
               content: [
-                { type: "image", image: imageUrl },
+                {
+                  type: "file",
+                  mediaType: mimeType,
+                  data: buffer,
+                },
                 {
                   type: "text",
                   text: "Extract all text from this contract/agreement image. Return the full text as accurately as possible.",
@@ -148,6 +167,13 @@ export function register(app: App, fastify: FastifyInstance) {
             },
           ],
         });
+
+        // Upload image to storage after extraction
+        const key = `contract-analyses/${Date.now()}-${data.filename}`;
+        const uploadedKey = await app.storage.upload(key, buffer);
+        const { url: imageUrl } = await app.storage.getSignedUrl(uploadedKey);
+
+        app.logger.info({ imageKey: uploadedKey, imageUrl }, "Image uploaded successfully");
 
         const extractedText = extractionResult.text;
         app.logger.info({ textLength: extractedText.length }, "Text extracted");
