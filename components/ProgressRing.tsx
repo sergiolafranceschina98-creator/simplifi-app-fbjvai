@@ -14,7 +14,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 interface ProgressRingProps {
   size?: number;
   strokeWidth?: number;
-  progress: number; // 0 to 100
+  progress: number;
   color?: string;
   backgroundColor?: string;
   useGradient?: boolean;
@@ -38,7 +38,7 @@ export default function ProgressRing({
       duration: 1500,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     });
-  }, [progress]);
+  }, [progress, animatedProgress]);
 
   const animatedProps = useAnimatedProps(() => {
     const strokeDashoffset = circumference - (circumference * animatedProgress.value) / 100;
@@ -57,7 +57,6 @@ export default function ProgressRing({
           </LinearGradient>
         </Defs>
         
-        {/* Background circle */}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -67,7 +66,6 @@ export default function ProgressRing({
           fill="none"
         />
         
-        {/* Progress circle */}
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}

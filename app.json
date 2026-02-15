@@ -63,10 +63,13 @@
       "router": {
         "origin": false
       },
-      "backendUrl": "https://vp7bgbhdgyw3gghcxr8zk5kkcwfvgfhs.app.specular.dev",
-      "eas": {
-        "projectId": "your-project-id"
-      }
+      "backendUrl": "https://vp7bgbhdgyw3gghcxr8zk5kkcwfvgfhs.app.specular.dev"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
     }
   }
 }

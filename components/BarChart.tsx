@@ -79,7 +79,7 @@ function BarItem({ label, value, maxValue, color, height, index, showValue }: Ba
         duration: 500,
       })
     );
-  }, [value, maxValue, height, index]);
+  }, [value, maxValue, height, index, animatedHeight, animatedOpacity]);
 
   const animatedBarStyle = useAnimatedStyle(() => ({
     height: animatedHeight.value,
@@ -90,7 +90,6 @@ function BarItem({ label, value, maxValue, color, height, index, showValue }: Ba
     opacity: animatedOpacity.value,
   }));
 
-  const barHeight = (value / maxValue) * (height - 40);
   const valueText = value.toString();
 
   return (
