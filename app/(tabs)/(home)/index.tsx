@@ -75,11 +75,12 @@ export default function HomeScreen() {
   });
 
   const pickImage = async () => {
-    console.log('User tapped camera button to pick image');
+    console.log('[User Action] Tapped Choose from Library button');
     
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
+      console.log('[Permission] Photo library access denied');
       setModalConfig({
         visible: true,
         title: 'Permission Required',
@@ -89,6 +90,7 @@ export default function HomeScreen() {
       return;
     }
 
+    console.log('[Permission] Photo library access granted');
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
@@ -96,17 +98,20 @@ export default function HomeScreen() {
     });
 
     if (!pickerResult.canceled && pickerResult.assets[0]) {
-      console.log('Image selected:', pickerResult.assets[0].uri);
+      console.log('[Image Selected]:', pickerResult.assets[0].uri);
       await analyzeContract(pickerResult.assets[0].uri);
+    } else {
+      console.log('[User Action] Image selection cancelled');
     }
   };
 
   const takePhoto = async () => {
-    console.log('User tapped camera button to take photo');
+    console.log('[User Action] Tapped Take Photo button');
     
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     
     if (permissionResult.granted === false) {
+      console.log('[Permission] Camera access denied');
       setModalConfig({
         visible: true,
         title: 'Permission Required',
@@ -116,32 +121,42 @@ export default function HomeScreen() {
       return;
     }
 
+    console.log('[Permission] Camera access granted');
     const cameraResult = await ImagePicker.launchCameraAsync({
       allowsEditing: false,
       quality: 1,
     });
 
     if (!cameraResult.canceled && cameraResult.assets[0]) {
-      console.log('Photo taken:', cameraResult.assets[0].uri);
+      console.log('[Photo Taken]:', cameraResult.assets[0].uri);
       await analyzeContract(cameraResult.assets[0].uri);
+    } else {
+      console.log('[User Action] Photo capture cancelled');
     }
   };
 
   const analyzeContract = async (imageUri: string) => {
     setAnalyzing(true);
     setResult(null);
-    console.log('Starting contract analysis for image:', imageUri);
+    console.log('[Analysis] Starting contract analysis for:', imageUri);
 
     try {
       const analysisResult = await analyzeContractAPI(imageUri);
       setResult(analysisResult);
-      console.log('Analysis complete:', analysisResult);
+      console.log('[Analysis] Complete - ID:', analysisResult.id);
+      console.log('[Analysis] Found:', {
+        risks: analysisResult.hiddenRisks.length,
+        moneyTraps: analysisResult.moneyTraps.length,
+        autoRenew: analysisResult.autoRenewTraps.length,
+        clauses: analysisResult.dangerousClauses.length,
+      });
     } catch (error) {
-      console.error('Error analyzing contract:', error);
+      console.error('[Analysis] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unable to analyze the contract. Please try again.';
       setModalConfig({
         visible: true,
         title: 'Analysis Failed',
-        message: 'Unable to analyze the contract. Please try again.',
+        message: errorMessage,
         type: 'error',
       });
     } finally {
@@ -486,7 +501,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.scanAgainButtonWrapper}
               onPress={() => {
-                console.log('User tapped Scan Another Contract');
+                console.log('[User Action] Tapped Scan Another Contract');
                 setResult(null);
               }}
               activeOpacity={0.8}
@@ -551,11 +566,20 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        boxShadow: `0 8px 16px ${colors.primary}60`,
+      },
+    }),
   },
   heroTitle: {
     fontSize: 32,
@@ -589,11 +613,20 @@ const styles = StyleSheet.create({
   primaryButtonWrapper: {
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: `0 8px 16px ${colors.primary}60`,
+      },
+    }),
   },
   primaryButton: {
     padding: 20,
@@ -853,11 +886,20 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
     marginTop: 20,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+      web: {
+        boxShadow: `0 6px 12px ${colors.primary}40`,
+      },
+    }),
   },
   scanAgainButton: {
     padding: 20,

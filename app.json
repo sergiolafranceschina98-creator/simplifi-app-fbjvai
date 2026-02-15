@@ -1,7 +1,8 @@
+
 {
   "expo": {
     "name": "Simplifi",
-    "slug": "Simplifi",
+    "slug": "simplifi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-qtv.png",
@@ -10,22 +11,32 @@
     "splash": {
       "image": "./assets/images/app-icon-qtv.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#0A0E1A"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Natively",
+      "bundleIdentifier": "com.simplifi.app",
+      "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Simplifi needs camera access to scan contracts and documents for analysis.",
+        "NSPhotoLibraryUsageDescription": "Simplifi needs photo library access to analyze contract images you select.",
+        "NSPhotoLibraryAddUsageDescription": "Simplifi needs permission to save analyzed contract results to your photo library."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon-qtv.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#0A0E1A"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively"
+      "package": "com.simplifi.app",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
@@ -34,15 +45,24 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Simplifi needs access to your photos to analyze contract images.",
+          "cameraPermission": "Simplifi needs camera access to scan contracts and documents."
+        }
+      ]
     ],
-    "scheme": "Simplifi",
+    "scheme": "simplifi",
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://vp7bgbhdgyw3gghcxr8zk5kkcwfvgfhs.app.specular.dev"
+      "backendUrl": "https://vp7bgbhdgyw3gghcxr8zk5kkcwfvgfhs.app.specular.dev",
+      "eas": {
+        "projectId": "your-project-id"
+      }
     }
   }
 }
